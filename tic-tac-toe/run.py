@@ -10,12 +10,6 @@ class Field(tkinter.Frame):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.winner = None
-        self.flags = None
-        self.buttons = None
-        self.clear()
-
-    def clear(self):
-        self.winner = None
         self.flags = [EMPTY for _ in range(9)]
         self.buttons = [
             tkinter.Button(self, text='', command=self.turn(i))
@@ -56,25 +50,25 @@ class Field(tkinter.Frame):
         return random_ids[0]
 
     def make_turn(self, cell, player):
-        self.buttons[cell]['text'] = 'X' if player == USER else 'O'
+        self.buttons[cell].destroy()
+        lbl = tkinter.Label(self, text='X' if player == USER else 'O', padx=7, pady=6)
+        lbl.grid(row=int(cell / 3) + 1, column=cell % 3)
         self.flags[cell] = player
         self.winner = self.get_winner()
 
     def turn(self, user_cell):
         def f():
-            if self.winner is not None or self.flags[user_cell] != EMPTY:
+            if self.winner is not None:
                 return
             self.make_turn(user_cell, USER)
             if self.winner is not None:
-                self.end_game()
-                return
+                return self.end_game()
 
             comp_cell = self.ai_turn()
             self.make_turn(comp_cell, COMP)
 
             if self.winner is not None:
-                self.end_game()
-                return
+                return self.end_game()
 
         return f
 
@@ -87,8 +81,6 @@ class Field(tkinter.Frame):
             winner_text = 'You are draw'
         lbl = tkinter.Label(self, text=winner_text)
         lbl.grid(row=0, column=0, columnspan=3)
-        # self.quit()
-        print(self.winner)
 
     def get_winner(self):
         sums = [
