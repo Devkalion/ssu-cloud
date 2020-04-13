@@ -1,4 +1,5 @@
 from enum import Enum
+import random
 
 SHIP_LENGTHS = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
 
@@ -147,3 +148,16 @@ class Field:
             col=ship.col,
             direction=Direction.horizontal if ship.direction == Direction.vertical else Direction.vertical
         )
+
+    @classmethod
+    def randomize(cls):
+        field = Field()
+        for ship in field.unplaced_ships():
+            row = random.randint(0, 9)
+            col = random.randint(0, 9)
+            direction = random.choice((Direction.vertical, Direction.horizontal))
+            try:
+                field.place(ship, row, col, direction)
+            except ValueError:
+                continue
+        return field

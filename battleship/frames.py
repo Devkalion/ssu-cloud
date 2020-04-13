@@ -11,8 +11,13 @@ class PlaceField(QWidget):
         super().__init__(*args, **kwargs)
         self.field = Field()
         self.layout = QGridLayout()
+        internal_layout = QGridLayout()
         self.buttons = {}
-        self.layout.setSpacing(1)
+        internal_layout.setSpacing(0)
+
+        randomize_btn = QPushButton(text='randomize')
+        randomize_btn.clicked.connect(self.randomize_field)
+        self.layout.addWidget(randomize_btn, 0, 0)
 
         for row in range(10):
             for column in range(10):
@@ -21,8 +26,19 @@ class PlaceField(QWidget):
                 button.setObjectName(f'{row}_{column}')
                 button.installEventFilter(self)
                 self.buttons[(row, column)] = button
-                self.layout.addWidget(button, row, column)
+                internal_layout.addWidget(button, row, column)
+        self.layout.addLayout(internal_layout, 2, 0)
+
         self.setLayout(self.layout)
+
+    def randomize_field(self):
+        self.field = Field.randomize()
+        for button in self.buttons.values():
+            button.setText('')
+
+        for ship in self.field.ships:
+            for row, col in ship.coordinates:
+                self.buttons[(row, col)].setText(str(ship.length))
 
     def rotate_ship(self, ship):
         old_coordinates = ship.coordinates
