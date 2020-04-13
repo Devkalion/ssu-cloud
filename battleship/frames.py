@@ -1,7 +1,7 @@
 import sys
 
 from PySide2.QtCore import QEvent, Qt, QObject
-from PySide2.QtWidgets import QApplication, QPushButton, QWidget, QGridLayout
+from PySide2.QtWidgets import QApplication, QPushButton, QWidget, QGridLayout, QLabel
 
 from models import Field, Ship, Direction
 
@@ -10,14 +10,22 @@ class PlaceField(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.field = Field()
-        self.layout = QGridLayout()
-        internal_layout = QGridLayout()
         self.buttons = {}
+        self.next_btn = None
+
+        self.init_visual()
+
+    def init_visual(self):
+        main_layout = QGridLayout()
+        internal_layout = QGridLayout()
         internal_layout.setSpacing(0)
+
+        label = QLabel('Place your ships.')
+        main_layout.addWidget(label, 0, 0, Qt.AlignCenter)
 
         randomize_btn = QPushButton(text='randomize')
         randomize_btn.clicked.connect(self.randomize_field)
-        self.layout.addWidget(randomize_btn, 0, 0)
+        main_layout.addWidget(randomize_btn, 1, 0)
 
         for row in range(10):
             for column in range(10):
@@ -27,9 +35,15 @@ class PlaceField(QWidget):
                 button.installEventFilter(self)
                 self.buttons[(row, column)] = button
                 internal_layout.addWidget(button, row, column)
-        self.layout.addLayout(internal_layout, 2, 0)
+        main_layout.addLayout(internal_layout, 3, 0)
 
-        self.setLayout(self.layout)
+        self.next_btn = QPushButton(text='Start')
+        # TODO change for real action
+        self.next_btn.clicked.connect(self.close)
+        main_layout.addWidget(self.next_btn, 5, 0)
+        self.next_btn.setEnabled(False)
+
+        self.setLayout(main_layout)
 
     def randomize_field(self):
         self.field = Field.randomize()
@@ -39,6 +53,8 @@ class PlaceField(QWidget):
         for ship in self.field.ships:
             for row, col in ship.coordinates:
                 self.buttons[(row, col)].setText(str(ship.length))
+
+        self.next_btn.setEnabled(True)
 
     def rotate_ship(self, ship):
         old_coordinates = ship.coordinates
@@ -70,27 +86,31 @@ class PlaceField(QWidget):
         for _row, _col in fields:
             self.buttons[_row, _col].setText(str(unplaced_ship.length))
 
-    def delete_ship(self, row, col):
-        ship = self.field.covering_ship(row, col)
-        if ship:
-            old_coordinates = ship.coordinates
-            for _row, _col in old_coordinates:
-                self.buttons[_row, _col].setText('')
-            ship.unplace()
+        try:
+            next(self.field.unplaced_ships())
+        except StopIteration:
+            self.next_btn.setEnabled(True)
+
+    def delete_ship(self, ship):
+        old_coordinates = ship.coordinates
+        for _row, _col in old_coordinates:
+            self.buttons[_row, _col].setText('')
+        ship.unplace()
+        self.next_btn.setEnabled(False)
 
     def eventFilter(self, obj, event):
         if event.type() == QEvent.MouseButtonPress:
             row, col = map(int, obj.objectName().split('_'))
+            covering_ship: Ship = self.field.covering_ship(row, col)
 
             if event.button() == Qt.LeftButton:
-                covering_ship: Ship = self.field.covering_ship(row, col)
                 if covering_ship:
                     self.rotate_ship(covering_ship)
                 else:
                     self.place_ship(row, col)
 
-            elif event.button() == Qt.RightButton:
-                self.delete_ship(row, col)
+            elif event.button() == Qt.RightButton and covering_ship:
+                self.delete_ship(covering_ship)
 
         return QObject.event(obj, event)
 
@@ -99,7 +119,7 @@ if __name__ == "__main__":
     app = QApplication(sys.argv)
 
     widget = PlaceField()
-    widget.resize(200, 200)
     widget.show()
+    widget.setFixedSize(widget.size())
 
     sys.exit(app.exec_())
