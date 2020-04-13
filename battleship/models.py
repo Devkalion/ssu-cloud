@@ -38,7 +38,7 @@ class Ship:
 
     @property
     def dead(self):
-        return any(cell == CellState.alive for cell in self._cells)
+        return all(cell == CellState.dead for cell in self._cells)
 
     @property
     def alive(self):
@@ -49,19 +49,26 @@ class Ship:
         return self.row is not None
 
     def includes(self, row, col):
-        return self._get_cell(row, col) is not None
+        return (row, col) in self.coordinates
 
     def _get_cell(self, row, col):
+        if not self.includes(row, col):
+            return None
+
         if self.direction == Direction.horizontal:
-            cell = col - self.col
+            return col - self.col
         else:
-            cell = row - self.row
-        if 0 <= cell < self.length:
-            return cell
+            return row - self.row
 
     def shot(self, row, col):
         cell = self._get_cell(row, col)
         self._cells[cell] = CellState.dead
+
+    @property
+    def coordinates(self):
+        if self.direction == Direction.vertical:
+            return list(zip(range(self.row, self.row + self.length), (self.col for _ in range(self.length))))
+        return list(zip((self.row for _ in range(self.length)), range(self.col, self.col + self.length)))
 
     def place(self, row, col, direction):
         if direction == Direction.horizontal and col + self.length > 10:
@@ -72,14 +79,25 @@ class Ship:
         self.col = col
         self.direction = direction
 
-    def rotate(self):
-        new_dir = Direction.horizontal if self.direction == Direction.vertical else Direction.vertical
-        self.place(self.row, self.col, new_dir)
+        return self.coordinates
+
+    def unplace(self):
+        self.row = None
+        self.col = None
 
 
 class Field:
     def __init__(self):
         self.ships = Ship.generate_ships()
+
+    def unplaced_ships(self):
+        while True:
+            unplaced_ships = filter(lambda x: not x.placed, self.ships)
+            sorted_ships = sorted(unplaced_ships, key=lambda x: x.length)
+            if len(sorted_ships):
+                yield sorted_ships[-1]
+            else:
+                break
 
     @property
     def empty(self):
@@ -95,3 +113,37 @@ class Field:
                 return ShotResult.kill if ship.dead else ShotResult.hit
 
         return ShotResult.miss
+
+    def place(self, ship: Ship, row, col, direction):
+        ship.place(row, col, direction)
+
+        searching_coordinates = []
+
+        for row, col in ship.coordinates:
+            for x in [-1, 0, 1]:
+                for y in [-1, 0, 1]:
+                    searching_coordinates.append((row + x, col + y))
+
+        for _ship in self.ships:
+            if not _ship.placed or _ship == ship:
+                continue
+
+            for row, col in searching_coordinates:
+                if _ship.includes(row, col):
+                    ship.unplace()
+                    raise ValueError
+
+        return ship.coordinates
+
+    def covering_ship(self, row, col):
+        for ship in self.ships:
+            if ship.placed and ship.includes(row, col):
+                return ship
+
+    def rotate_ship(self, ship):
+        return self.place(
+            ship,
+            row=ship.row,
+            col=ship.col,
+            direction=Direction.horizontal if ship.direction == Direction.vertical else Direction.vertical
+        )
