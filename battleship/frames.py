@@ -6,6 +6,28 @@ from PySide2.QtWidgets import QApplication, QPushButton, QWidget, QGridLayout, Q
 from models import Field, Ship, Direction
 
 
+class RootWidget(QWidget):
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.layout = QGridLayout()
+        self.layout.setContentsMargins(0, 0, 0, 0)
+        self.setLayout(self.layout)
+        self.placeField = None
+        self.battleField = None
+
+    def start_placement(self):
+        if self.battleField:
+            self.battleField.close()
+        self.placeField = PlaceField()
+        self.layout.addWidget(self.placeField)
+
+    def start_battle(self):
+        field = self.placeField.field
+        self.placeField.close()
+        self.battleField = BattleField(field)
+        self.layout.addWidget(self.battleField)
+
+
 class PlaceField(QWidget):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
@@ -39,7 +61,7 @@ class PlaceField(QWidget):
 
         self.next_btn = QPushButton(text='Start')
         # TODO change for real action
-        self.next_btn.clicked.connect(self.close)
+        self.next_btn.clicked.connect(root_widget.start_battle)
         main_layout.addWidget(self.next_btn, 5, 0)
         self.next_btn.setEnabled(False)
 
@@ -115,11 +137,20 @@ class PlaceField(QWidget):
         return QObject.event(obj, event)
 
 
+class BattleField(QWidget):
+    def __init__(self, field, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.layout = QGridLayout()
+        self.field = field
+        self.setLayout(self.layout)
+
+
 if __name__ == "__main__":
     app = QApplication(sys.argv)
 
-    widget = PlaceField()
-    widget.show()
-    widget.setFixedSize(widget.size())
+    root_widget = RootWidget()
+    root_widget.start_placement()
+    root_widget.show()
+    # root_widget.setFixedSize(root_widget.size())
 
     sys.exit(app.exec_())
