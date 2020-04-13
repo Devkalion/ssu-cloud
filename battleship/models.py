@@ -1,7 +1,13 @@
-from enum import Enum
 import random
+from enum import Enum
 
 SHIP_LENGTHS = (4, 3, 3, 2, 2, 2, 1, 1, 1, 1)
+
+NEAR_COORDINATES = [
+    (-1, -1), (-1, 0), (-1, 1),
+    (0, -1), (0, 0), (0, 1),
+    (1, -1), (1, 0), (1, 1)
+]
 
 
 class ShotResult(Enum):
@@ -121,9 +127,8 @@ class Field:
         searching_coordinates = []
 
         for row, col in ship.coordinates:
-            for x in [-1, 0, 1]:
-                for y in [-1, 0, 1]:
-                    searching_coordinates.append((row + x, col + y))
+            for x, y in NEAR_COORDINATES:
+                searching_coordinates.append((row + x, col + y))
 
         for _ship in self.ships:
             if not _ship.placed or _ship == ship:
